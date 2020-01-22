@@ -1,0 +1,196 @@
+extends layout.pug
+
+block scripts
+  script.
+    const [ getIssueForm, createIssueForm, updateIssueForm, deleteIssueForm ] = document.forms;
+    const elements = getIssueForm.elements;
+    const issueContainer = document.getElementById('issues');
+    const projectName = 'testProject'
+    const url = '#{url}'
+    
+    const getFormUrlencoded = (params) => Object.keys(params).map((key) => {
+      return encodeURIComponent(key) + '=' + encodeURIComponent(params[key]);
+    }).join('&');
+    
+    const getIssues = () => {
+    
+      const _id = elements.issueId.value;
+      const open = elements.open.value;
+
+      let query = "";
+      
+      if(_id) {
+        
+        query = `?_id=${_id}`;
+      }
+      
+      if(open) {
+        if(!query) {
+          query = "?";
+        }
+      
+        query = `${query}&open=${open}`;
+      }
+    
+      fetch(`${url}api/issues/${projectName}{query}`)
+        .then(response => response.json())
+        .then(issues => {
+          
+          while(issueContainer.lastChild) {
+              issueContainer.removeChild(issueContainer.lastChild);
+          }
+        
+          issues.forEach(({_id, ...rest}) => {
+            
+          const li = document.createElement("li");
+            li.dataset.id = _id;
+            li.appendChild(document.createTextNode(`id: ${_id} title: ${rest.issue_title} status: ${rest.open ? "opened": "closed"}`));
+            issueContainer.appendChild(li);
+          });
+        
+          setTimeout(getIssues, 2000);
+        })
+        .catch(err => {
+          console.log(err)
+        })
+    
+    };
+    
+    setTimeout(getIssues, 0);
+    
+    createIssueForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const form = event.target;
+      const elements = form.elements;
+      const formData = Object.keys(elements).reduce((acc, index) => {
+        const element = elements[index];
+        acc[element.name] = element.value;
+        return acc;
+      }, {})
+      const data = getFormUrlencoded(formData);
+      
+      fetch(`${url}api/issues/${projectName}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
+        },
+        body: data
+      })
+      .then(response => response.text())
+      .then(text => {
+        form.reset();
+      });
+      
+    })
+    
+    updateIssueForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const form = event.target;
+      const elements = form.elements;
+      const formData = Object.keys(elements).reduce((acc, index) => {
+        const element = elements[index];
+        acc[element.name] = element.value;
+        return acc;
+      }, {})
+      const data = getFormUrlencoded(formData);
+      
+      fetch(`${url}api/issues/${projectName}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
+        },
+        body: data
+      })
+      .then(response => response.text())
+      .then(text => {
+        form.reset();
+      });
+      
+    })
+    
+    deleteIssueForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const form = event.target;
+      const elements = form.elements;
+      const formData = Object.keys(elements).reduce((acc, index) => {
+        const element = elements[index];
+        acc[element.name] = element.value;
+        return acc;
+      }, {})
+      const data = getFormUrlencoded(formData);
+      
+      fetch(`${url}api/issues/${projectName}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
+        },
+        body: data
+      })
+      .then(response => response.text())
+      .then(text => {
+        form.reset();
+      });
+      
+    })
+    
+block body
+  .container
+    h1.headline Information Security and Quality Assurance Projects - #{title}
+    
+    .item
+      h3 Usage
+        div
+          .header
+            span.httpMethod.httpMethod--get GET
+            span.httpUrl #{url}api/issues/projectname?open=false&id=1
+          form.form
+            input.field(type="text", name="issueId", placeholder="id")
+            label.checkbox-container is Open
+              input(type="checkbox", name="open")
+              span.checkbox-checkmark
+          div#issues
+        div
+          .header
+            span.httpMethod.httpMethod--post POST
+            span.httpUrl #{url}api/issues/projectname
+          form.form(enctype="application/x-www-form-urlencoded")
+            input.field(required, type="text", name="issue_title", placeholder="title")
+            textarea.field(required, type="text", name="issue_text", placeholder="text")
+            input.field(required, type="text", name="created_by", placeholder="created by")
+            input.field(type="text", name="assigned_to", placeholder="assigned to")
+            input.field(type="text", name="status_text", placeholder="status text")
+            input.submitButton(type="submit" value="Create")
+        div
+          .header
+            span.httpMethod.httpMethod--post PUT
+            span.httpUrl #{url}api/issues/projectname
+          form.form
+            input.field(required, type="text", name="id", placeholder="id")
+            input.field(required, type="text", name="issue_title", placeholder="title")
+            textarea.field(required, type="text", name="issue_text", placeholder="text")
+            input.field(required, type="text", name="created_by", placeholder="created by")
+            input.field(type="text", name="assigned_to", placeholder="assigned to")
+            input.field(type="text", name="status_text", placeholder="status text")
+            input.field(type="checkbox", name="open", placeholder="is open?")
+            input.submitButton(type="submit" value="Update")
+        div
+          .header
+            span.httpMethod.httpMethod--post DELETE
+            span.httpUrl #{url}api/issues/projectname
+          form.form
+            input.field(type="text", name="id", placeholder="id")
+            input.submitButton(type="submit" value="Delete")
+      
+    .item
+      h3 User Story
+      ol
+        li I will prevent the client from trying to guess(sniff) the MIME type.
+        li Prevent cross site scripting(XSS attack).
+        li I can POST /api/issues/{projectname} with form data containing required issue_title, issue_text, created_by, and optional assigned_to and status_text.
+        li The object saved (and returned) will include all of those fields (blank for optional no input) and also include created_on(date/time), updated_on(date/time), open(boolean, true for open, false for closed), and _id.
+        li I can PUT /api/issues/{projectname} with a _id and any fields in the object with a value to object said object. Returned will be 'successfully updated' or 'could not update '+_id. This should always update updated_on. If no fields are sent return 'no updated field sent'.
+        li I can DELETE /api/issues/{projectname} with a _id to completely delete an issue. If no _id is sent return '_id error', success: 'deleted '+_id, failed: 'could not delete '+_id.
+        li I can GET /api/issues/{projectname} for an array of all issues on that specific project with all the information for each issue as was returned when posted.
+        li I can filter my get request by also passing along any field and value in the query(ie. /api/issues/{project}?open=false). I can pass along as many fields/values as I want.
+        li All 11 functional tests are complete and passing.
+        
